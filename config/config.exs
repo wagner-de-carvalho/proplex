@@ -7,6 +7,19 @@
 # General application configuration
 import Config
 
+config :proplex, :scopes,
+  users: [
+    default: true,
+    module: Proplex.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:users, :id],
+    schema_key: :users_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: Proplex.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_users
+  ]
+
 config :proplex,
   ecto_repos: [Proplex.Repo],
   generators: [timestamp_type: :utc_datetime]
