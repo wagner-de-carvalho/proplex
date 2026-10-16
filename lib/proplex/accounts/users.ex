@@ -1,6 +1,7 @@
 defmodule Proplex.Accounts.Users do
   use Ecto.Schema
   import Ecto.Changeset
+  alias Proplex.Repo
 
   schema "users" do
     field :email, :string
@@ -28,6 +29,15 @@ defmodule Proplex.Accounts.Users do
     users
     |> cast(attrs, [:email, :username])
     |> validate_email(opts)
+  end
+
+  def registration_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :username, :password])
+    |> validate_email(opts)
+    |> validate_username(opts)
+    |> validate_confirmation(:password, message: "does not match password")
+    |> validate_password(opts)
   end
 
   defp validate_email(changeset, opts) do
@@ -88,6 +98,41 @@ defmodule Proplex.Accounts.Users do
     # |> validate_format(:password, ~r/[A-Z]/, message: "at least one upper case character")
     # |> validate_format(:password, ~r/[!?@#$%^&*_0-9]/, message: "at least one digit or punctuation character")
     |> maybe_hash_password(opts)
+  end
+
+  defp validate_username(changeset, opts) do
+    changeset
+    |> validate_required([:username])
+    |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/,
+      message: "must contain only letters, numbers, and underscores"
+    )
+    |> validate_length(:username, min: 3, max: 20)
+    |> maybe_validate_unique_username(opts)
+  end
+
+  defp maybe_validate_unique_username(changeset, opts) do
+    if Keyword.get(opts, :validate_unique_usrname, true) do
+      changeset
+      |> unsafe_validate_unique(:username, Repo)
+      |> unique_constraint(:username)
+    else
+      changeset
+    end
+  end
+
+  def username_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:username])
+    |> validate_username(opts)
+    |> validate_username_changed()
+  end
+
+  defp validate_username_changed(changeset) do
+    if get_field(changeset, :username) && get_change(changeset, :username) == nil do
+      add_error(changeset, :username, "did not change")
+    else
+      changeset
+    end
   end
 
   defp maybe_hash_password(changeset, opts) do

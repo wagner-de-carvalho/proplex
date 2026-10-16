@@ -102,4 +102,139 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
+/* ============================================================================
+   Proplex design system - typography, forms, buttons, micro-interactions
+   ============================================================================
+   Lives below daisyUI so it overrides the default component styles.
+   Loaded by every page via the <link> in root.html.heex.
+   ============================================================================ */
+
+/* ----- Typography foundation ----- */
+
+/* uses the OS system font stack - zero network requests, instant first paint */
+/* picks SF Pro on macOS/iOS, Segoe UI on Windows, Roboto on Android, etc */
+:root {
+	font-family:
+		ui-sans-serif,
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		Roboto,
+		"Helvetica Neue",
+		Arial,
+		sans-serif;
+	/* tabular numerals - lines up prices, dates, ids and unit numbers in tables */
+	font-feature-settings: "tnum" 1;
+}
+
+body {
+	/* sharper font rendering on macOS retina displays */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+}
+
+/* heading polish - tightened tracking and tuned line height */
+/* applied to h1/h2/h3 globally and to the <.header> component title via .header h1 */
+h1,
+h2,
+h3,
+.header h1 {
+	letter-spacing: -0.015em;
+	line-height: 1.2;
+}
+
+/* selection highlight uses a teal tint instead of browser-default blue */
+::selection {
+	background: color-mix(in oklch, var(--color-primary) 25%, transparent);
+	color: var(--color-base-content);
+}
+
+/* ----- Form inputs ----- */
+
+/* taller, more breathable inputs - 44px matches the iOS minimum tap target */
+.input,
+.textarea,
+.select {
+	min-height: 2.75rem;
+	font-size: 0.9375rem;
+}
+
+/* labels feel like labels, not just floating text - tighter, slightly muted, medium weight */
+.fieldset > label > .label {
+	font-weight: 500;
+	font-size: 0.8125rem;
+	letter-spacing: 0.01em;
+	opacity: 0.85;
+}
+
+/* strong focus ring - 3px primary-tinted glow plus a border darken */
+/* color-mix lets us lean on the existing teal token instead of hardcoding a value */
+.input:focus,
+.textarea:focus,
+.select:focus {
+	outline: none;
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 3px
+		color-mix(in oklch, var(--color-primary) 18%, transparent);
+}
+
+/* ----- Buttons ----- */
+
+/* slightly more substantial - matches input height, light letter-spacing on labels */
+.btn {
+	font-weight: 500;
+	letter-spacing: 0.005em;
+	min-height: 2.75rem;
+	/* one transition rule covers hover, active, and focus states cleanly */
+	transition:
+		transform 120ms ease,
+		background-color 120ms ease,
+		box-shadow 120ms ease,
+		border-color 120ms ease;
+}
+
+/* primary button micro-interaction - 1px lift on hover with a soft teal shadow */
+/* satisfies the "subtle micro-interactions" guideline in AGENTS.md */
+.btn-primary:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px -4px
+		color-mix(in oklch, var(--color-primary) 35%, transparent);
+}
+
+/* reset on click so the button doesn't sit perpetually elevated */
+.btn-primary:active {
+	transform: translateY(0);
+	box-shadow: none;
+}
+
+/* ghost buttons get a subtle teal wash on hover instead of just an opacity change */
+.btn-ghost:hover {
+	background-color: color-mix(in oklch, var(--color-primary) 8%, transparent);
+}
+
+/* sm variant of btn needs to override the min-height we set above */
+.btn-sm {
+	min-height: 2.25rem;
+	font-size: 0.8125rem;
+}
+
+/* ----- Password input ----- */
+
+/* hide the browser-default password reveal pseudo-element on Edge/IE */
+/* we ship our own toggle via <.password_input> in core_components.ex */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+	display: none;
+}
+
+/* ----- Focus visible (keyboard navigation) ----- */
+
+/* unified focus ring for buttons and links when navigating by keyboard */
+.btn:focus-visible,
+a:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: 2px;
+}
+
 /* This file is for your main application CSS */
