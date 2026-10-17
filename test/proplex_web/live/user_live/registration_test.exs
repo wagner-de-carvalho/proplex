@@ -1,4 +1,4 @@
-defmodule ProplexWeb.UsersLive.RegistrationTest do
+defmodule ProplexWeb.UserLive.RegistrationTest do
   use ProplexWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -15,7 +15,7 @@ defmodule ProplexWeb.UsersLive.RegistrationTest do
     test "redirects if already logged in", %{conn: conn} do
       result =
         conn
-        |> log_in_users(users_fixture())
+        |> log_in_user(user_fixture())
         |> live(~p"/users/register")
         |> follow_redirect(conn, ~p"/")
 
@@ -28,19 +28,19 @@ defmodule ProplexWeb.UsersLive.RegistrationTest do
       result =
         lv
         |> element("#registration_form")
-        |> render_change(users: %{"email" => "with spaces"})
+        |> render_change(user: %{"email" => "with spaces"})
 
       assert result =~ "Register"
       assert result =~ "must have the @ sign and no spaces"
     end
   end
 
-  describe "register users" do
+  describe "register user" do
     test "creates account but does not log in", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
 
-      email = unique_users_email()
-      form = form(lv, "#registration_form", users: valid_users_attributes(email: email))
+      email = unique_user_email()
+      form = form(lv, "#registration_form", user: valid_user_attributes(email: email))
 
       {:ok, _lv, html} =
         render_submit(form)
@@ -53,12 +53,12 @@ defmodule ProplexWeb.UsersLive.RegistrationTest do
     test "renders errors for duplicated email", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
 
-      users = users_fixture(%{email: "test@email.com"})
+      user = user_fixture(%{email: "test@email.com"})
 
       result =
         lv
         |> form("#registration_form",
-          users: %{"email" => users.email}
+          user: %{"email" => user.email}
         )
         |> render_submit()
 

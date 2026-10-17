@@ -1,7 +1,7 @@
-defmodule ProplexWeb.UsersLive.Settings do
+defmodule ProplexWeb.UserLive.Settings do
   use ProplexWeb, :live_view
 
-  on_mount {ProplexWeb.UsersAuth, :require_sudo_mode}
+  on_mount {ProplexWeb.UserAuth, :require_sudo_mode}
 
   alias Proplex.Accounts
 
@@ -42,7 +42,7 @@ defmodule ProplexWeb.UsersLive.Settings do
         <input
           name={@password_form[:email].name}
           type="hidden"
-          id="hidden_users_email"
+          id="hidden_user_email"
           spellcheck="false"
           value={@current_email}
         />
@@ -72,8 +72,8 @@ defmodule ProplexWeb.UsersLive.Settings do
   @impl true
   def mount(%{"token" => token}, _session, socket) do
     socket =
-      case Accounts.update_users_email(socket.assigns.current_scope.users, token) do
-        {:ok, _users} ->
+      case Accounts.update_user_email(socket.assigns.current_scope.user, token) do
+        {:ok, _user} ->
           put_flash(socket, :info, "Email changed successfully.")
 
         {:error, _} ->
@@ -84,13 +84,13 @@ defmodule ProplexWeb.UsersLive.Settings do
   end
 
   def mount(_params, _session, socket) do
-    users = socket.assigns.current_scope.users
-    email_changeset = Accounts.change_users_email(users, %{}, validate_unique: false)
-    password_changeset = Accounts.change_users_password(users, %{}, hash_password: false)
+    user = socket.assigns.current_scope.user
+    email_changeset = Accounts.change_user_email(user, %{}, validate_unique: false)
+    password_changeset = Accounts.change_user_password(user, %{}, hash_password: false)
 
     socket =
       socket
-      |> assign(:current_email, users.email)
+      |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
@@ -100,11 +100,11 @@ defmodule ProplexWeb.UsersLive.Settings do
 
   @impl true
   def handle_event("validate_email", params, socket) do
-    %{"users" => users_params} = params
+    %{"user" => user_params} = params
 
     email_form =
-      socket.assigns.current_scope.users
-      |> Accounts.change_users_email(users_params, validate_unique: false)
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_email(user_params, validate_unique: false)
       |> Map.put(:action, :validate)
       |> to_form()
 
@@ -112,15 +112,15 @@ defmodule ProplexWeb.UsersLive.Settings do
   end
 
   def handle_event("update_email", params, socket) do
-    %{"users" => users_params} = params
-    users = socket.assigns.current_scope.users
-    true = Accounts.sudo_mode?(users)
+    %{"user" => user_params} = params
+    user = socket.assigns.current_scope.user
+    true = Accounts.sudo_mode?(user)
 
-    case Accounts.change_users_email(users, users_params) do
+    case Accounts.change_user_email(user, user_params) do
       %{valid?: true} = changeset ->
-        Accounts.deliver_users_update_email_instructions(
+        Accounts.deliver_user_update_email_instructions(
           Ecto.Changeset.apply_action!(changeset, :insert),
-          users.email,
+          user.email,
           &url(~p"/users/settings/confirm-email/#{&1}")
         )
 
@@ -133,11 +133,11 @@ defmodule ProplexWeb.UsersLive.Settings do
   end
 
   def handle_event("validate_password", params, socket) do
-    %{"users" => users_params} = params
+    %{"user" => user_params} = params
 
     password_form =
-      socket.assigns.current_scope.users
-      |> Accounts.change_users_password(users_params, hash_password: false)
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_password(user_params, hash_password: false)
       |> Map.put(:action, :validate)
       |> to_form()
 
@@ -145,11 +145,11 @@ defmodule ProplexWeb.UsersLive.Settings do
   end
 
   def handle_event("update_password", params, socket) do
-    %{"users" => users_params} = params
-    users = socket.assigns.current_scope.users
-    true = Accounts.sudo_mode?(users)
+    %{"user" => user_params} = params
+    user = socket.assigns.current_scope.user
+    true = Accounts.sudo_mode?(user)
 
-    case Accounts.change_users_password(users, users_params) do
+    case Accounts.change_user_password(user, user_params) do
       %{valid?: true} = changeset ->
         {:noreply, assign(socket, trigger_submit: true, password_form: to_form(changeset))}
 

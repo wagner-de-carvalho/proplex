@@ -1,8 +1,8 @@
-defmodule Proplex.Accounts.UsersNotifier do
+defmodule Proplex.Accounts.UserNotifier do
   import Swoosh.Email
 
   alias Proplex.Mailer
-  alias Proplex.Accounts.Users
+  alias Proplex.Accounts.User
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
@@ -19,14 +19,14 @@ defmodule Proplex.Accounts.UsersNotifier do
   end
 
   @doc """
-  Deliver instructions to update a users email.
+  Deliver instructions to update a user email.
   """
-  def deliver_update_email_instructions(users, url) do
-    deliver(users.email, "Update email instructions", """
+  def deliver_update_email_instructions(user, url) do
+    deliver(user.email, "Update email instructions", """
 
     ==============================
 
-    Hi #{users.email},
+    Hi #{user.email},
 
     You can change your email by visiting the URL below:
 
@@ -41,19 +41,19 @@ defmodule Proplex.Accounts.UsersNotifier do
   @doc """
   Deliver instructions to log in with a magic link.
   """
-  def deliver_login_instructions(users, url) do
-    case users do
-      %Users{confirmed_at: nil} -> deliver_confirmation_instructions(users, url)
-      _ -> deliver_magic_link_instructions(users, url)
+  def deliver_login_instructions(user, url) do
+    case user do
+      %User{confirmed_at: nil} -> deliver_confirmation_instructions(user, url)
+      _ -> deliver_magic_link_instructions(user, url)
     end
   end
 
-  defp deliver_magic_link_instructions(users, url) do
-    deliver(users.email, "Log in instructions", """
+  defp deliver_magic_link_instructions(user, url) do
+    deliver(user.email, "Log in instructions", """
 
     ==============================
 
-    Hi #{users.email},
+    Hi #{user.email},
 
     You can log into your account by visiting the URL below:
 
@@ -65,12 +65,12 @@ defmodule Proplex.Accounts.UsersNotifier do
     """)
   end
 
-  defp deliver_confirmation_instructions(users, url) do
-    deliver(users.email, "Confirmation instructions", """
+  defp deliver_confirmation_instructions(user, url) do
+    deliver(user.email, "Confirmation instructions", """
 
     ==============================
 
-    Hi #{users.email},
+    Hi #{user.email},
 
     You can confirm your account by visiting the URL below:
 

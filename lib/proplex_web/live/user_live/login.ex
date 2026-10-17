@@ -1,4 +1,4 @@
-defmodule ProplexWeb.UsersLive.Login do
+defmodule ProplexWeb.UserLive.Login do
   use ProplexWeb, :live_view
 
   alias Proplex.Accounts
@@ -99,9 +99,9 @@ defmodule ProplexWeb.UsersLive.Login do
   def mount(_params, _session, socket) do
     email =
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
-        get_in(socket.assigns, [:current_scope, Access.key(:users), Access.key(:email)])
+        get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
 
-    form = to_form(%{"email" => email}, as: "users")
+    form = to_form(%{"email" => email}, as: "user")
 
     {:ok, assign(socket, form: form, trigger_submit: false)}
   end
@@ -111,10 +111,10 @@ defmodule ProplexWeb.UsersLive.Login do
     {:noreply, assign(socket, :trigger_submit, true)}
   end
 
-  def handle_event("submit_magic", %{"users" => %{"email" => email}}, socket) do
-    if users = Accounts.get_users_by_email(email) do
+  def handle_event("submit_magic", %{"user" => %{"email" => email}}, socket) do
+    if user = Accounts.get_user_by_email(email) do
       Accounts.deliver_login_instructions(
-        users,
+        user,
         &url(~p"/users/log-in/#{&1}")
       )
     end

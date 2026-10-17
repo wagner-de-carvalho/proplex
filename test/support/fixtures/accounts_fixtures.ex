@@ -9,55 +9,57 @@ defmodule Proplex.AccountsFixtures do
   alias Proplex.Accounts
   alias Proplex.Accounts.Scope
 
-  def unique_users_email, do: "users#{System.unique_integer()}@example.com"
-  def valid_users_password, do: "hello world!"
+  def unique_user_email, do: "user#{System.unique_integer()}@example.com"
+  def unique_username, do: "User#{System.unique_integer()}"
+  def valid_user_password, do: "hello world!"
 
-  def valid_users_attributes(attrs \\ %{}) do
+  def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
-      email: unique_users_email()
+      email: unique_user_email(),
+      username: unique_username()
     })
   end
 
-  def unconfirmed_users_fixture(attrs \\ %{}) do
-    {:ok, users} =
+  def unconfirmed_user_fixture(attrs \\ %{}) do
+    {:ok, user} =
       attrs
-      |> valid_users_attributes()
-      |> Accounts.register_users()
+      |> valid_user_attributes()
+      |> Accounts.register_user()
 
-    users
+    user
   end
 
-  def users_fixture(attrs \\ %{}) do
-    users = unconfirmed_users_fixture(attrs)
+  def user_fixture(attrs \\ %{}) do
+    user = unconfirmed_user_fixture(attrs)
 
     token =
-      extract_users_token(fn url ->
-        Accounts.deliver_login_instructions(users, url)
+      extract_user_token(fn url ->
+        Accounts.deliver_login_instructions(user, url)
       end)
 
-    {:ok, {users, _expired_tokens}} =
-      Accounts.login_users_by_magic_link(token)
+    {:ok, {user, _expired_tokens}} =
+      Accounts.login_user_by_magic_link(token)
 
-    users
+    user
   end
 
-  def users_scope_fixture do
-    users = users_fixture()
-    users_scope_fixture(users)
+  def user_scope_fixture do
+    user = user_fixture()
+    user_scope_fixture(user)
   end
 
-  def users_scope_fixture(users) do
-    Scope.for_users(users)
+  def user_scope_fixture(user) do
+    Scope.for_user(user)
   end
 
-  def set_password(users) do
-    {:ok, {users, _expired_tokens}} =
-      Accounts.update_users_password(users, %{password: valid_users_password()})
+  def set_password(user) do
+    {:ok, {user, _expired_tokens}} =
+      Accounts.update_user_password(user, %{password: valid_user_password()})
 
-    users
+    user
   end
 
-  def extract_users_token(fun) do
+  def extract_user_token(fun) do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
     token
@@ -65,24 +67,24 @@ defmodule Proplex.AccountsFixtures do
 
   def override_token_authenticated_at(token, authenticated_at) when is_binary(token) do
     Proplex.Repo.update_all(
-      from(t in Accounts.UsersToken,
+      from(t in Accounts.UserToken,
         where: t.token == ^token
       ),
       set: [authenticated_at: authenticated_at]
     )
   end
 
-  def generate_users_magic_link_token(users) do
-    {encoded_token, users_token} = Accounts.UsersToken.build_email_token(users, "login")
-    Proplex.Repo.insert!(users_token)
-    {encoded_token, users_token.token}
+  def generate_user_magic_link_token(user) do
+    {encoded_token, user_token} = Accounts.UserToken.build_email_token(user, "login")
+    Proplex.Repo.insert!(user_token)
+    {encoded_token, user_token.token}
   end
 
-  def offset_users_token(token, amount_to_add, unit) do
+  def offset_user_token(token, amount_to_add, unit) do
     dt = DateTime.add(DateTime.utc_now(:second), amount_to_add, unit)
 
     Proplex.Repo.update_all(
-      from(ut in Accounts.UsersToken, where: ut.token == ^token),
+      from(ut in Accounts.UserToken, where: ut.token == ^token),
       set: [inserted_at: dt, authenticated_at: dt]
     )
   end

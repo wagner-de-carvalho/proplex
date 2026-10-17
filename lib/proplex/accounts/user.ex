@@ -1,4 +1,4 @@
-defmodule Proplex.Accounts.Users do
+defmodule Proplex.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
   alias Proplex.Repo
@@ -15,7 +15,7 @@ defmodule Proplex.Accounts.Users do
   end
 
   @doc """
-  A users changeset for registering or changing the email.
+  A user changeset for registering or changing the email.
 
   It requires the email to change otherwise an error is added.
 
@@ -25,8 +25,8 @@ defmodule Proplex.Accounts.Users do
       uniqueness of the email, useful when displaying live validations.
       Defaults to `true`.
   """
-  def email_changeset(users, attrs, opts \\ []) do
-    users
+  def email_changeset(user, attrs, opts \\ []) do
+    user
     |> cast(attrs, [:email, :username])
     |> validate_email(opts)
   end
@@ -68,7 +68,7 @@ defmodule Proplex.Accounts.Users do
   end
 
   @doc """
-  A users changeset for changing the password.
+  A user changeset for changing the password.
 
   It is important to validate the length of the password, as long passwords may
   be very expensive to hash for certain algorithms.
@@ -82,8 +82,8 @@ defmodule Proplex.Accounts.Users do
       validations on a LiveView form), this option can be set to `false`.
       Defaults to `true`.
   """
-  def password_changeset(users, attrs, opts \\ []) do
-    users
+  def password_changeset(user, attrs, opts \\ []) do
+    user
     |> cast(attrs, [:password])
     |> validate_confirmation(:password, message: "does not match password")
     |> validate_password(opts)
@@ -155,18 +155,18 @@ defmodule Proplex.Accounts.Users do
   @doc """
   Confirms the account by setting `confirmed_at`.
   """
-  def confirm_changeset(users) do
+  def confirm_changeset(user) do
     now = DateTime.utc_now(:second)
-    change(users, confirmed_at: now)
+    change(user, confirmed_at: now)
   end
 
   @doc """
   Verifies the password.
 
-  If there is no users or the users doesn't have a password, we call
+  If there is no user or the user doesn't have a password, we call
   `Bcrypt.no_user_verify/0` to avoid timing attacks.
   """
-  def valid_password?(%Proplex.Accounts.Users{hashed_password: hashed_password}, password)
+  def valid_password?(%Proplex.Accounts.User{hashed_password: hashed_password}, password)
       when is_binary(hashed_password) and byte_size(password) > 0 do
     Bcrypt.verify_pass(password, hashed_password)
   end

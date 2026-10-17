@@ -1,4 +1,4 @@
-defmodule ProplexWeb.UsersLive.Confirmation do
+defmodule ProplexWeb.UserLive.Confirmation do
   use ProplexWeb, :live_view
 
   alias Proplex.Accounts
@@ -9,11 +9,11 @@ defmodule ProplexWeb.UsersLive.Confirmation do
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="mx-auto max-w-sm">
         <div class="text-center">
-          <.header>Welcome {@users.email}</.header>
+          <.header>Welcome {@user.email}</.header>
         </div>
 
         <.form
-          :if={!@users.confirmed_at}
+          :if={!@user.confirmed_at}
           for={@form}
           id="confirmation_form"
           phx-mounted={JS.focus_first()}
@@ -36,7 +36,7 @@ defmodule ProplexWeb.UsersLive.Confirmation do
         </.form>
 
         <.form
-          :if={@users.confirmed_at}
+          :if={@user.confirmed_at}
           for={@form}
           id="login_form"
           phx-submit="submit"
@@ -64,8 +64,8 @@ defmodule ProplexWeb.UsersLive.Confirmation do
           <% end %>
         </.form>
 
-        <p :if={!@users.confirmed_at} class="alert alert-outline mt-8">
-          Tip: If you prefer passwords, you can enable them in the users settings.
+        <p :if={!@user.confirmed_at} class="alert alert-outline mt-8">
+          Tip: If you prefer passwords, you can enable them in the user settings.
         </p>
       </div>
     </Layouts.app>
@@ -74,10 +74,10 @@ defmodule ProplexWeb.UsersLive.Confirmation do
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
-    if users = Accounts.get_users_by_magic_link_token(token) do
-      form = to_form(%{"token" => token}, as: "users")
+    if user = Accounts.get_user_by_magic_link_token(token) do
+      form = to_form(%{"token" => token}, as: "user")
 
-      {:ok, assign(socket, users: users, form: form, trigger_submit: false),
+      {:ok, assign(socket, user: user, form: form, trigger_submit: false),
        temporary_assigns: [form: nil]}
     else
       {:ok,
@@ -88,7 +88,7 @@ defmodule ProplexWeb.UsersLive.Confirmation do
   end
 
   @impl true
-  def handle_event("submit", %{"users" => params}, socket) do
-    {:noreply, assign(socket, form: to_form(params, as: "users"), trigger_submit: true)}
+  def handle_event("submit", %{"user" => params}, socket) do
+    {:noreply, assign(socket, form: to_form(params, as: "user"), trigger_submit: true)}
   end
 end
