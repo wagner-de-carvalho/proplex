@@ -4,6 +4,7 @@ defmodule Proplex.Accounts do
   """
 
   import Ecto.Query, warn: false
+  require Logger
   alias Proplex.Repo
 
   alias Proplex.Accounts.{User, UserToken, UserNotifier}
@@ -237,28 +238,50 @@ defmodule Proplex.Accounts do
      `mix help phx.gen.auth`.
   """
   def login_user_by_magic_link(token) do
+    # Verify the token's signature and build a query to look it up.
     {:ok, query} = UserToken.verify_magic_link_token_query(token)
 
     case Repo.one(query) do
-      # Prevent session fixation attacks by disallowing magic links for unconfirmed user with password
-      {%User{confirmed_at: nil, hashed_password: hash}, _token} when not is_nil(hash) ->
-        raise """
-        magic link log in is not allowed for unconfirmed user with a password set!
+      # Unconfirmed user with a password already set. Logging them in via the
+      # link would let anyone who registered with the victim's email hijack
+      # their session, so we just confirm the email and send them to log in.
+      {%User{confirmed_at: nil, hashed_password: hash} = user, _token} when not is_nil(hash) ->
+        # Confirm the user and wipe all their tokens in one transaction.
+        {:ok, _} =
+          user
+          |> User.confirm_changeset()
+          |> update_user_and_delete_all_tokens()
 
-        This cannot happen with the default implementation, which indicates that you
-        might have adapted the code to a different use case. Please make sure to read the
-        "Mixing magic link and password registration" section of `mix help phx.gen.auth`.
-        """
+        Logger.info("Email confirmation completed",
+          event: :email_confirmed,
+          user_id: user.id,
+          flow: :password_user
+        )
 
+        {:error, :password_user_confirmed}
+
+      # Unconfirmed user, no password — standard magic-link signup.
+      # Confirm them, log them in, expire all their tokens.
       {%User{confirmed_at: nil} = user, _token} ->
-        user
-        |> User.confirm_changeset()
-        |> update_user_and_delete_all_tokens()
+        result =
+          user
+          |> User.confirm_changeset()
+          |> update_user_and_delete_all_tokens()
 
+        Logger.info("Email confirmation completed",
+          event: :email_confirmed,
+          user_id: user.id,
+          flow: :magic_link
+        )
+
+        result
+
+      # Already confirmed — passwordless login. Burn the link, sign them in.
       {user, token} ->
         Repo.delete!(token)
         {:ok, {user, []}}
 
+      # Token didn't decode, was already used, or has expired.
       nil ->
         {:error, :not_found}
     end

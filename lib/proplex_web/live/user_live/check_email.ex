@@ -17,8 +17,9 @@ defmodule ProplexWeb.UserLive.CheckEmail do
           <div class="alert alert-info">
             <div class="text-left">
               <p>
-                A confirmation link was sent to <span :if={@mail} class="font-semibold">{@emai}</span>
-                <span :if={!@mail}>your e-mail address</span>
+                A confirmation link was sent to
+                <span :if={@email} class="font-semibold">{@email}</span>
+                <span :if={!@email}>your e-mail address</span>
               </p>
               <p class="mt-2 text-sm opacity-80">
                 Click the link in that email to activate your account.

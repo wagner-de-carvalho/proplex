@@ -15,12 +15,15 @@ defmodule ProplexWeb.UserSessionController do
   # magic link login
   defp create(conn, %{"user" => %{"token" => token} = user_params}, info) do
     case Accounts.login_user_by_magic_link(token) do
-      {:ok, {user, tokens_to_disconnect}} ->
-        UserAuth.disconnect_sessions(tokens_to_disconnect)
-
+      {:ok, {user, _tokens_to_disconnect}} ->
         conn
         |> put_flash(:info, info)
         |> UserAuth.log_in_user(user, user_params)
+
+      {:error, :password_user_confirmed} ->
+        conn
+        |> put_flash(:info, "User confirmed successfully. Please login with your password.")
+        |> redirect(to: ~p"/users/log-in")
 
       _ ->
         conn
