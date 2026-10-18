@@ -52,9 +52,8 @@ defmodule ProplexWeb.UserLive.Registration do
               required
             />
 
-            <.input
+            <.password_input
               field={@form[:password]}
-              type="password"
               label="Password"
               autocomplete="new-password"
               required
