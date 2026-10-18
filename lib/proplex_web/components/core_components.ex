@@ -334,7 +334,9 @@ defmodule ProplexWeb.CoreComponents do
       <button
         type="button"
         aria-label="Toggle password visibility"
-        class="absolute right-3 top-9 h-full z-10 flex size-7 items-center justify-center rounded text-base-content/50 hover:text-base-content"
+        class="absolute right-3 top-12 z-10 flex size-7
+       -translate-y-1/2 items-center justify-center
+       rounded text-base-content/50 hover:text-base-content"
         phx-click={
           JS.toggle_attribute({"type", "text", "password"}, to: "##{@field.id}")
           |> JS.toggle_class("hidden", to: "##{@field.id}-show-icon")
