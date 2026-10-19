@@ -1,8 +1,6 @@
 defmodule ProplexWeb.UserLive.Login do
   use ProplexWeb, :live_view
 
-  alias Proplex.Accounts
-
   @impl true
   def render(assigns) do
     ~H"""
