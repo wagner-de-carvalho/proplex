@@ -216,7 +216,7 @@ defmodule Proplex.Accounts do
   """
   def get_user_by_magic_link_token(token) do
     with {:ok, query} <- UserToken.verify_magic_link_token_query(token),
-         {user, _token} <- Repo.one(query) do
+         %User{} = user <- Repo.one(query) do
       user
     else
       _ -> nil
@@ -331,7 +331,7 @@ defmodule Proplex.Accounts do
 
   def get_user_by_reset_password_token(token) do
     with {:ok, query} <- UserToken.verify_reset_password_token_query(token),
-         {user, _token} <- Repo.one(query) do
+         %User{} = user <- Repo.one(query) do
       user
     else
       _ -> nil

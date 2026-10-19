@@ -8,3 +8,8 @@
 - user_prompt: "erro: function Logger.info/2 is undefined or private (accounts.ex:254, login_user_by_magic_link/1)"
 - assistant_response_summary: "Logger.info é macro; adicionado `require Logger` em Proplex.Accounts. Verificados outros módulos que usam Logger sem require."
 - files_affected: "lib/proplex/accounts.ex, .chat-history/log.md"
+---
+- timestamp: "2026-10-19T14:57:45-03:00"
+- user_prompt: "Encontrar e corrigir erro: link de reset password sempre mostra Reset password link is invalid or it has expired"
+- assistant_response_summary: "Causa: UserToken.verify_reset_password_token_query/1 faz select: user, mas Accounts.get_user_by_reset_password_token/1 casava {user, _token} no with, caindo sempre no else -> nil. Corrigido o pattern para %User{} = user. Compilado com sucesso."
+- files_affected: "lib/proplex/accounts.ex"

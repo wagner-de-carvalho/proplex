@@ -55,7 +55,7 @@ defmodule ProplexWeb.UserLive.Login do
             />
             <div class="mt-1 mb-3 flex justify-end">
               <.link
-                navigate={~p"/users/log-in"}
+                navigate={~p"/users/forgot-password"}
                 class="text-sm text-primary hover:underline"
               >
                 Forgot your password?
