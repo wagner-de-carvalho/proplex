@@ -1,6 +1,7 @@
 defmodule Proplex.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
+  alias Proplex.Authorization.UserRole
   alias Proplex.Repo
 
   schema "users" do
@@ -10,6 +11,10 @@ defmodule Proplex.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
+
+    has_many :user_roles, UserRole
+
+    has_many :roles, through: [:user_roles, :role]
 
     timestamps(type: :utc_datetime)
   end

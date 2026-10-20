@@ -6,8 +6,8 @@ defmodule Proplex.Accounts do
   import Ecto.Query, warn: false
   require Logger
   alias Proplex.Repo
-
   alias Proplex.Accounts.{User, UserToken, UserNotifier}
+  alias Proplex.Authorization
 
   ## Database getters
 
@@ -91,6 +91,14 @@ defmodule Proplex.Accounts do
     %User{}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
+    |> case do
+      {:ok, user} ->
+        Authorization.assign_role(user, "tenant")
+        {:ok, user}
+
+      error ->
+        error
+    end
   end
 
   ## Settings
