@@ -107,6 +107,9 @@ defmodule ProplexWeb.UserLive.Registration do
 
       {:error, %Changeset{} = changeset} ->
         {:noreply, assign_form(socket, Map.put(changeset, :action, :insert))}
+
+      {:error, :registration_failed} ->
+        {:noreply, socket |> put_flash(:error, "Registration failed. Please try again.")}
     end
   end
 

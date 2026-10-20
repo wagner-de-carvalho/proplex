@@ -6,8 +6,9 @@ defmodule Proplex.Accounts do
   import Ecto.Query, warn: false
   require Logger
   alias Proplex.Repo
-  alias Proplex.Accounts.{User, UserToken, UserNotifier}
+  alias Proplex.Accounts.{Profile, User, UserToken, UserNotifier}
   alias Proplex.Authorization
+  alias Ecto.Multi
 
   ## Database getters
 
@@ -88,16 +89,21 @@ defmodule Proplex.Accounts do
 
   """
   def register_user(attrs) do
-    %User{}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
+    Multi.new()
+    |> Multi.insert(:user, User.registration_changeset(%User{}, attrs))
+    |> Multi.run(:profile, fn repo, %{user: user} ->
+      %{user_id: user.id}
+      |> Profile.create_changeset()
+      |> repo.insert()
+    end)
+    |> Multi.run(:role, fn _repo, %{user: user} ->
+      Authorization.assign_role(user, "tenant")
+    end)
+    |> Repo.transact()
     |> case do
-      {:ok, user} ->
-        Authorization.assign_role(user, "tenant")
-        {:ok, user}
-
-      error ->
-        error
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _changes} -> {:error, changeset}
+      {:error, _step, _failed, _changes} -> {:error, :registration_failed}
     end
   end
 
