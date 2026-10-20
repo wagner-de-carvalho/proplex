@@ -1,6 +1,7 @@
 defmodule Proplex.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
+  alias Proplex.Accounts.Profile
   alias Proplex.Authorization.UserRole
   alias Proplex.Repo
 
@@ -15,6 +16,8 @@ defmodule Proplex.Accounts.User do
     has_many :user_roles, UserRole
 
     has_many :roles, through: [:user_roles, :role]
+
+    has_one :profile, Profile
 
     timestamps(type: :utc_datetime)
   end
