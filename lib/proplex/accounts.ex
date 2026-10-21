@@ -44,6 +44,16 @@ defmodule Proplex.Accounts do
     end
   end
 
+  def change_user_profile(%Profile{} = profile, attrs \\ %{}) do
+    Profile.changeset(profile, attrs)
+  end
+
+  def update_user_profile(%Profile{} = profile, attrs) do
+    profile
+    |> Profile.changeset(attrs)
+    |> Repo.update()
+  end
+
   defp create_user_profile(%{profile: nil} = user) do
     %{user_id: user.id}
     |> Profile.create_changeset()

@@ -53,3 +53,23 @@
 - user_prompt: "funcionou corretamente, obrigado"
 - assistant_response_summary: "Confirmacao do usuario de que o alinhamento do avatar ficou correto; resposta de encerramento."
 - files_affected: "none"
+---
+- timestamp: "2026-10-21T16:54:40-03:00"
+- user_prompt: "Protocol.UndefinedError Phoenix.HTML.Safe para Tuple {\"Prefer not to say\", :prefer_not_to_say} em ProfileShow"
+- assistant_response_summary: "Profile.get_gender/1 retornava a tupla {label, value} de Enum.find; alterado para retornar apenas o label (ou nil). Unico chamador: profile_show.ex:57."
+- files_affected: "lib/proplex/accounts/profile.ex"
+---
+- timestamp: "2026-10-21T16:56:50-03:00"
+- user_prompt: "mostrar gender apenas se nao for nil ou \"\""
+- assistant_response_summary: "Em ProfileShow, :if da linha Gender alterado para @user.profile.gender not in [nil, \"\"]."
+- files_affected: "lib/proplex_web/live/user_live/profile_show.ex"
+---
+- timestamp: "2026-10-21T17:06:30-03:00"
+- user_prompt: "Alteracao anterior feita na pagina errada (descartada); ajustar formulario de edicao conforme imagem: gender, occupation, bio e phone um sobre o outro"
+- assistant_response_summary: "ProfileEdit: grid sm:grid-cols-3 agora contem so first/middle/last name; gender, occupation, bio e phone em largura total empilhados; country/city em grid sm:grid-cols-2. Corrigido phx-disabled-with -> phx-disable-with, prompt Select... e placeholder conforme modelo."
+- files_affected: "lib/proplex_web/live/user_live/profile_edit.ex"
+---
+- timestamp: "2026-10-21T17:07:01-03:00"
+- user_prompt: "agora esta correto. Obrigado"
+- assistant_response_summary: "Confirmacao do usuario de que o layout do ProfileEdit ficou correto; resposta de encerramento."
+- files_affected: "none"

@@ -1,6 +1,7 @@
 defmodule Proplex.Accounts.Profile do
   use Ecto.Schema
   import Ecto.Changeset
+  alias Phoenix.Naming
   alias Proplex.Accounts.User
 
   @fields [
@@ -72,5 +73,33 @@ defmodule Proplex.Accounts.Profile do
     %__MODULE__{}
     |> changeset(attrs)
     |> validate_required([:user_id])
+  end
+
+  def occupations do
+    __MODULE__
+    |> Ecto.Enum.values(:occupation)
+    |> Enum.map(&{Naming.humanize(Atom.to_string(&1)), &1})
+    |> Enum.map(fn {name, value} ->
+      case String.split(name, " ") do
+        [str_word, atom_word] ->
+          {String.upcase(str_word) <> " " <> String.capitalize(atom_word), value}
+
+        [str_word] ->
+          {String.capitalize(str_word), value}
+      end
+    end)
+  end
+
+  def genders do
+    __MODULE__
+    |> Ecto.Enum.values(:gender)
+    |> Enum.map(&{Naming.humanize(Atom.to_string(&1)), &1})
+  end
+
+  def get_gender(gender) when is_atom(gender) do
+    case Enum.find(genders(), fn {_label, value} -> value == gender end) do
+      {label, _value} -> label
+      nil -> nil
+    end
   end
 end

@@ -1,6 +1,7 @@
 defmodule ProplexWeb.UserLive.ProfileShow do
   use ProplexWeb, :live_view
   alias Proplex.Accounts
+  alias Proplex.Accounts.Profile
 
   @impl true
   def render(assigns) do
@@ -49,6 +50,14 @@ defmodule ProplexWeb.UserLive.ProfileShow do
 
           <dl class="mt-6 space-y-3 text-sm">
             <div
+              :if={@user.profile.gender not in [nil, ""]}
+              class="flex justify-between"
+            >
+              <dt class="text-base-content/60">Gender</dt>
+              <dd class="font-medium">{Profile.get_gender(@user.profile.gender)}</dd>
+            </div>
+
+            <div
               :if={@user.profile.occupation && @user.profile.occupation != :none}
               class="flex justify-between"
             >
@@ -77,6 +86,14 @@ defmodule ProplexWeb.UserLive.ProfileShow do
               <dd class="font-medium">{Calendar.strftime(@user.inserted_at, "%B %Y")}</dd>
             </div>
           </dl>
+          <div :if={own_profile?(@current_scope, @user)} class="mt-6">
+            <.link
+              navigate={~p"/users/settings/profile"}
+              class="btn btn-primary w-full"
+            >
+              <.icon name="hero-pencil-square" class="size-4" /> Edit Profile
+            </.link>
+          </div>
         </div>
       </div>
     </Layouts.app>
@@ -93,6 +110,9 @@ defmodule ProplexWeb.UserLive.ProfileShow do
         {:ok, socket |> assign(:user, user)}
     end
   end
+
+  defp own_profile?(%{user: %{id: id}}, %{id: id}), do: true
+  defp own_profile?(_, _), do: false
 
   defp display_name(user) do
     [user.profile.first_name, user.profile.middle_name, user.profile.last_name]
