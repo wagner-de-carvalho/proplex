@@ -13,3 +13,43 @@
 - user_prompt: "Encontrar e corrigir erro: link de reset password sempre mostra Reset password link is invalid or it has expired"
 - assistant_response_summary: "Causa: UserToken.verify_reset_password_token_query/1 faz select: user, mas Accounts.get_user_by_reset_password_token/1 casava {user, _token} no with, caindo sempre no else -> nil. Corrigido o pattern para %User{} = user. Compilado com sucesso."
 - files_affected: "lib/proplex/accounts.ex"
+---
+- timestamp: "2026-10-20T20:15:10-03:00"
+- user_prompt: "Novo erro: registro falha com flash Registration failed. Please try again. (rollback apos SELECT em roles)"
+- assistant_response_summary: "Causa: tabela roles vazia; Authorization.assign_role(user, \"tenant\") retornava {:error, :role_not_found} no Multi.run(:role) de Accounts.register_user/1, gerando rollback e {:error, :registration_failed}. priv/repo/seeds.exs nao carregava seeds/rbac.exs. Adicionado Code.require_file(\"seeds/rbac.exs\", __DIR__) e executado mix run priv/repo/seeds.exs (roles tenant/technician/admin criadas)."
+- files_affected: "priv/repo/seeds.exs"
+---
+- timestamp: "2026-10-20T20:34:30-03:00"
+- user_prompt: "Magic link is invalid or it has expired persiste apos inserir usuario"
+- assistant_response_summary: "Regressao causada pelo sed da 1a correcao (substituiu globalmente). Accounts.get_user_by_magic_link_token/1 voltou a casar {user, _token}, pois verify_magic_link_token_query seleciona {user, token}. Reset password mantem %User{} = user."
+- files_affected: "lib/proplex/accounts.ex"
+---
+- timestamp: "2026-10-20T20:38:29-03:00"
+- user_prompt: "Funcionou perfeitamente. Obrigado."
+- assistant_response_summary: "Confirmacao do usuario de que magic link, registro e reset de senha funcionam; resposta de encerramento."
+- files_affected: "none"
+---
+- timestamp: "2026-10-20T20:41:40-03:00"
+- user_prompt: "FunctionClauseError em ProplexWeb.UserAuthorization.on_mount/4 com {:require_permissions, :profiles, :view}"
+- assistant_response_summary: "Typo no router: on_mount usava :require_permissions (plural), mas UserAuthorization.on_mount/4 casa {:require_permission, resource, action}. Corrigido no router.ex linha 62."
+- files_affected: "lib/proplex_web/router.ex"
+---
+- timestamp: "2026-10-20T20:46:00-03:00"
+- user_prompt: "Ecto.ConstraintError profiles_user_id_index ao abrir /users/acme/profile"
+- assistant_response_summary: "Guarda invertida em Accounts.create_user_profile/1: inseria profile quando ele ja existia (when not is_nil). Trocado para casar %{profile: nil}; caso contrario retorna o user."
+- files_affected: "lib/proplex/accounts.ex"
+---
+- timestamp: "2026-10-20T20:47:27-03:00"
+- user_prompt: "funcionou corretamente"
+- assistant_response_summary: "Confirmacao do usuario de que a pagina de perfil funciona; resposta de encerramento."
+- files_affected: "none"
+---
+- timestamp: "2026-10-20T20:50:30-03:00"
+- user_prompt: "Icone do avatar desalinhado em ProfileShow (tailwind)"
+- assistant_response_summary: "Avatar: translate-x-1/2 -> -translate-x-1/2, removido inline conflitante com flex, rouded-full -> rounded-full. Corrigidos typos rounded-bo/rouded-box -> rounded-box, font-smibold -> font-semibold, e removido {} sobrando em Member since."
+- files_affected: "lib/proplex_web/live/user_live/profile_show.ex"
+---
+- timestamp: "2026-10-20T20:53:08-03:00"
+- user_prompt: "funcionou corretamente, obrigado"
+- assistant_response_summary: "Confirmacao do usuario de que o alinhamento do avatar ficou correto; resposta de encerramento."
+- files_affected: "none"

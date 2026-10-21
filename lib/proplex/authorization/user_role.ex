@@ -6,6 +6,7 @@ defmodule Proplex.Authorization.UserRole do
 
   @fields [:user_id, :property_id, :role_id, :resource, :action, :description]
 
+  @primary_key false
   schema "user_roles" do
     field :action, :string
     field :description, :string

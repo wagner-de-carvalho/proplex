@@ -13,6 +13,7 @@ defmodule Proplex.Accounts.Profile do
     :bio,
     :phone_number,
     :country,
+    :city,
     :avatar_url,
     :reputation,
     :average_rating,
@@ -44,6 +45,7 @@ defmodule Proplex.Accounts.Profile do
     field :bio, :string
     field :phone_number, :string
     field :country, :string
+    field :city, :string
     field :avatar_url, :string
     field :reputation, :integer, default: 100
     field :average_rating, :float, default: 0.0

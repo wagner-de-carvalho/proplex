@@ -12,6 +12,7 @@ defmodule Proplex.Repo.Migrations.CreateProfiles do
       add :bio, :text
       add :phone_number, :string
       add :country, :string
+      add :city, :string
       add :avatar_url, :string
       add :reputation, :integer, default: 100, null: false
       add :average_rating, :float, default: 0.0, null: false

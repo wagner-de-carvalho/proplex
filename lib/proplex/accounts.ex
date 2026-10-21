@@ -32,6 +32,27 @@ defmodule Proplex.Accounts do
     Repo.get_by(User, username: username)
   end
 
+  def get_user_with_profile_by_username(username) when is_binary(username) do
+    case get_user_by_username(username) do
+      nil ->
+        nil
+
+      user ->
+        user
+        |> Repo.preload(:profile)
+        |> create_user_profile()
+    end
+  end
+
+  defp create_user_profile(%{profile: nil} = user) do
+    %{user_id: user.id}
+    |> Profile.create_changeset()
+    |> Repo.insert()
+    |> then(fn {:ok, profile} -> %{user | profile: profile} end)
+  end
+
+  defp create_user_profile(user), do: user
+
   @doc """
   Gets a user by email and password.
 
@@ -230,7 +251,7 @@ defmodule Proplex.Accounts do
   """
   def get_user_by_magic_link_token(token) do
     with {:ok, query} <- UserToken.verify_magic_link_token_query(token),
-         %User{} = user <- Repo.one(query) do
+         {user, _token} <- Repo.one(query) do
       user
     else
       _ -> nil
