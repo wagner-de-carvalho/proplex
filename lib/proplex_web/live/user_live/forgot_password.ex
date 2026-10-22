@@ -66,6 +66,6 @@ defmodule ProplexWeb.UserLive.ForgotPassword do
     info =
       "If your e-mail is in our system, you will receive instructions to reset your password shortly."
 
-    {:noreply, socket |> put_flash(:info, info) |> redirect(to: ~p"/users/log-in")}
+    {:noreply, socket |> put_flash(:info, info) |> push_navigate(to: ~p"/users/log-in")}
   end
 end
