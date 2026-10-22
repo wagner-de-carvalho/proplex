@@ -21,6 +21,19 @@ defmodule Proplex.Accounts.Profile do
     :report_count
   ]
 
+  @name_regex ~r/^[\p{L}\s'\-]+$/u
+  @phone_regex ~r/^[+\d\s\-()]{7,20}$/
+
+  @text_fields_to_trim [
+    :first_name,
+    :middle_name,
+    :last_name,
+    :bio,
+    :phone_number,
+    :country,
+    :city
+  ]
+
   schema "profiles" do
     field :first_name, :string
     field :middle_name, :string
@@ -60,13 +73,26 @@ defmodule Proplex.Accounts.Profile do
   def changeset(profile, attrs) do
     profile
     |> cast(attrs, @fields)
+    |> trim_text_fields(@text_fields_to_trim)
     |> validate_length(:first_name, min: 2, max: 80)
     |> validate_length(:middle_name, min: 2, max: 80)
     |> validate_length(:last_name, min: 2, max: 80)
     |> validate_length(:bio, max: 500)
-    |> validate_length(:phone_number, max: 30)
     |> validate_length(:country, max: 80)
     |> validate_length(:city, max: 80)
+    |> validate_format(:first_name, @name_regex,
+      message: "must contain only letters, spaces, apostrophes, or hyphens"
+    )
+    |> validate_format(:middle_name, @name_regex,
+      message: "must contain only letters, spaces, apostrophes, or hyphens"
+    )
+    |> validate_format(:last_name, @name_regex,
+      message: "must contain only letters, spaces, apostrophes, or hyphens"
+    )
+    |> validate_format(:phone_number, @phone_regex,
+      message:
+        "must contain only 7-20 characters: digits, spaces, dashes, parentheses and optional leading +"
+    )
   end
 
   def create_changeset(attrs) do
@@ -101,5 +127,20 @@ defmodule Proplex.Accounts.Profile do
       {label, _value} -> label
       nil -> nil
     end
+  end
+
+  defp trim_text_fields(changeset, @text_fields_to_trim) do
+    Enum.reduce(@text_fields_to_trim, changeset, fn field, acc ->
+      update_change(acc, field, fn
+        value when is_binary(value) ->
+          case String.trim(value) do
+            "" -> nil
+            trimmed -> trimmed
+          end
+
+        other ->
+          other
+      end)
+    end)
   end
 end
