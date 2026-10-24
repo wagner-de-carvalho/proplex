@@ -73,3 +73,8 @@
 - user_prompt: "agora esta correto. Obrigado"
 - assistant_response_summary: "Confirmacao do usuario de que o layout do ProfileEdit ficou correto; resposta de encerramento."
 - files_affected: "none"
+---
+- timestamp: "2026-10-23T21:22:10-03:00"
+- user_prompt: "FunctionClauseError em Phoenix.Component.upload_errors/1 no ProfileEdit"
+- assistant_response_summary: "profile_edit.ex:81 chamava upload_errors(@uploads) (mapa de todos os uploads); upload_errors/1 espera um UploadConfig. Alterado para upload_errors(@uploads.avatar); removido atributo class duplicado no <p> de erros."
+- files_affected: "lib/proplex_web/live/user_live/profile_edit.ex"
