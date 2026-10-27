@@ -2,6 +2,7 @@ defmodule ProplexWeb.UserSessionController do
   use ProplexWeb, :controller
 
   alias Proplex.Accounts
+  alias Proplex.RateLimit
   alias ProplexWeb.UserAuth
 
   def create(conn, %{"_action" => "confirmed"} = params) do
@@ -41,12 +42,38 @@ defmodule ProplexWeb.UserSessionController do
       |> put_flash(:info, info)
       |> UserAuth.log_in_user(user, user_params)
     else
+      case RateLimit.record_failed_login(email, client_ip(conn)) do
+        :ok ->
+          conn
+          |> put_flash(:error, "Invalid email or password")
+          |> put_flash(:email, String.slice(email, 0, 160))
+          |> redirect(to: ~p"/users/log-in")
+
+        {:deny, retry_after_ms} ->
+          minutes = max(1, ceil(retry_after_ms / 60_000))
+          unit = if minutes == 1, do: "minute", else: "minutes"
+
+          conn
+          |> put_flash(
+            :error,
+            "Too many failed login attempts. Please try again in #{minutes} #{unit}."
+          )
+          |> put_flash(:email, String.slice(email, 0, 160))
+          |> redirect(to: ~p"/users/log-in")
+      end
+
       # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
       conn
       |> put_flash(:error, "Invalid email or password")
       |> put_flash(:email, String.slice(email, 0, 160))
       |> redirect(to: ~p"/users/log-in")
     end
+  end
+
+  defp client_ip(conn) do
+    conn.remote_ip
+    |> :inet.ntoa()
+    |> to_string()
   end
 
   def update_password(conn, %{"user" => user_params} = params) do

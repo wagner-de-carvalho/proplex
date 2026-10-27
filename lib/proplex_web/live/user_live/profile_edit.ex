@@ -3,6 +3,7 @@ defmodule ProplexWeb.UserLive.ProfileEdit do
   require Logger
   alias Proplex.Accounts
   alias Proplex.Accounts.Profile
+  alias Proplex.RateLimit
   alias Ecto.Changeset
 
   @impl true
@@ -27,7 +28,7 @@ defmodule ProplexWeb.UserLive.ProfileEdit do
             phx-change="validate"
           >
             <div class="mb-6">
-              <label class="mb-2 block text-sm font-medium" for="">Avatar</label>
+              <label class="mb-2 block text-sm font-medium" for={@uploads.avatar.ref}>Avatar</label>
               <div class="flex items-center gap-4">
                 <div class="size-20 shrink-0 overflow-hidden rounded-full bg-base-300 ring-1 ring-base-300">
                   <%= case avatar_preview_state(@uploads, @profile) do %>
@@ -132,18 +133,20 @@ defmodule ProplexWeb.UserLive.ProfileEdit do
               <.input field={@form[:country]} type="text" label="Country" />
               <.input field={@form[:city]} type="text" label="City" />
             </div>
-            <.button phx-disable-with="Saving..." class="btn btn-primary mt-4 w-full">
-              Save changes
-            </.button>
+
+            <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <.link
+                navigate={~p"/users/#{@current_scope.user.username}/profile"}
+                class="btn btn-outline w-full sm:col-span-1"
+              >
+                Cancel
+              </.link>
+
+              <.button phx-disable-with="Saving..." class="btn btn-primary w-full sm:col-span-2">
+                Save changes
+              </.button>
+            </div>
           </.form>
-          <p class="mt-6 text-center text-sm text-base-content/70">
-            <.link
-              navigate={~p"/users/#{@current_scope.user.username}/profile"}
-              class="font-semibold text-primary hover:underline"
-            >
-              Back to profile
-            </.link>
-          </p>
         </div>
       </div>
     </Layouts.app>
@@ -174,28 +177,63 @@ defmodule ProplexWeb.UserLive.ProfileEdit do
       |> Accounts.change_user_profile(attrs)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, form: to_form(changeset))}
+    {:noreply, assign(socket, form: to_form(changeset, as: "profile"))}
   end
 
   @impl true
   def handle_event("save", %{"profile" => attrs}, socket) do
-    case consume_avatar_uploads(socket) do
-      [{:error, _reason}] ->
+    case avatar_upload_rate_check(socket) do
+      {:denyy, retry_after_ms} ->
+        minutes = max(1, ceil(retry_after_ms / 60_000))
+        unit = if minutes == 1, do: "minute", else: "minutes"
+
         {:noreply,
          socket
          |> put_flash(
            :error,
-           "We couddn't process that image. Please try a different file (JPG, JPEG, PNG or WEBP)."
+           "You've uploaded too many avatars recently. Please try again in #{minutes} #{unit}."
          )}
 
-      avatar_result ->
-        save_profile(socket, attrs, avatar_result)
+      :ok ->
+        consume_avatar_entry(socket, attrs)
     end
   end
 
   @impl true
   def handle_event("cancel-avatar-upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :avatar, ref)}
+  end
+
+  defp avatar_upload_rate_check(socket) do
+    if socket.assigns.uploads.avatar.entries == [] do
+      :ok
+    else
+      user_id = socket.assigns.current_scope.user.id
+      key = "avatar_upload:user:#{user_id}"
+      allow_or_deny_hit(key)
+    end
+  end
+
+  defp allow_or_deny_hit(key) do
+    case RateLimit.hit(key, :timer.hours(1), _limit = 10) do
+      {:allow, _count} -> :ok
+      {:deny, retry_after_ms} -> {:denyy, retry_after_ms}
+    end
+  end
+
+  defp consume_avatar_entry(socket, attrs) do
+    case consume_avatar_uploads(socket) do
+      [{:error, _reason}] ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "We couldn't process that image. Please try a different file (JPG, JPEG, PNG or WEBP)."
+         )}
+
+      avatar_result ->
+        save_profile(socket, attrs, avatar_result)
+    end
   end
 
   defp avatar_preview_state(uploads, profile) do
@@ -211,7 +249,6 @@ defmodule ProplexWeb.UserLive.ProfileEdit do
     end
   end
 
-  # TODO: Implement avatar upload consumption logic
   defp consume_avatar_uploads(socket) do
     consume_uploaded_entries(socket, :avatar, fn %{path: tmp_path}, _entry ->
       filename = "#{Ecto.UUID.generate()}.jpg"
@@ -281,16 +318,17 @@ defmodule ProplexWeb.UserLive.ProfileEdit do
       end
 
     case Accounts.update_user_profile(socket.assigns.profile, attrs) do
-      {:ok, profile} ->
+      {:ok, _profile} ->
         if avatar_result != [] do
           delete_old_avatar_file(socket.assigns.profile.avatar_url)
         end
 
+        username = socket.assigns.current_scope.user.username
+
         {:noreply,
          socket
-         |> assign(:profile, profile)
-         |> assign_form(Accounts.change_user_profile(profile))
-         |> put_flash(:info, "Profile updated successfully.")}
+         |> put_flash(:info, "Profile updated successfully.")
+         |> push_navigate(to: ~p"/users/#{username}/profile")}
 
       {:error, %Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}

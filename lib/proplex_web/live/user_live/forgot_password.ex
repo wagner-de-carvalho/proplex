@@ -1,7 +1,9 @@
 defmodule ProplexWeb.UserLive.ForgotPassword do
   use ProplexWeb, :live_view
 
+  alias Phoenix.LiveView
   alias Proplex.Accounts
+  alias Proplex.RateLimit
 
   @impl true
   def render(assigns) do
@@ -51,21 +53,48 @@ defmodule ProplexWeb.UserLive.ForgotPassword do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, form: to_form(%{}, as: "user"))}
+    {:ok,
+     socket |> assign(form: to_form(%{}, as: "user")) |> assign(client_ip: get_client_ip(socket))}
   end
 
   @impl true
   def handle_event("send_email", %{"user" => %{"email" => email}}, socket) do
-    if user = Accounts.get_user_by_email(email) do
-      Accounts.deliver_user_reset_password_instructions(
-        user,
-        &url(~p"/users/reset-password/#{&1}")
-      )
+    case RateLimit.record_failed_login(email, socket.assigns.client_ip) do
+      :ok ->
+        if user = Accounts.get_user_by_email(email) do
+          Accounts.deliver_user_reset_password_instructions(
+            user,
+            &url(~p"/users/reset-password/#{&1}")
+          )
+        end
+
+        info =
+          "If your e-mail is in our system, you will receive instructions to reset your password shortly."
+
+        {:noreply, socket |> put_flash(:info, info) |> push_navigate(to: ~p"/users/log-in")}
+
+      {:deny, retry_after_ms} ->
+        minutes = max(1, ceil(retry_after_ms / 60_000))
+        unit = if minutes == 1, do: "minute", else: "minutes"
+
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Too many password reset requests. Please try again in #{minutes} #{unit}."
+         )}
     end
+  end
 
-    info =
-      "If your e-mail is in our system, you will receive instructions to reset your password shortly."
+  defp get_client_ip(socket) do
+    case LiveView.get_connect_info(socket, :peer_data) do
+      %{address: address} ->
+        address
+        |> :inet.ntoa()
+        |> to_string()
 
-    {:noreply, socket |> put_flash(:info, info) |> push_navigate(to: ~p"/users/log-in")}
+      _ ->
+        "unknown"
+    end
   end
 end
