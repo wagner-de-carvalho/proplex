@@ -1,5 +1,6 @@
 defmodule Proplex.Authorization do
   import Ecto.Query, warn: false
+  require Logger
   alias Proplex.Authorization.Permission
   alias Proplex.Authorization.Role
   alias Proplex.Authorization.UserRole
@@ -42,8 +43,18 @@ defmodule Proplex.Authorization do
       |> filter_exact_property_id(property_id)
       |> Repo.delete_all()
       |> then(fn
-        {count, _} when count > 0 -> :ok
-        _ -> {:error, :not_found}
+        {count, _} when count > 0 ->
+          Logger.info("Role revoked",
+            event: "role_revoked",
+            user_id: user.id,
+            role: to_string(role_name),
+            property_id: property_id
+          )
+
+          :ok
+
+        _ ->
+          {:error, :not_found}
       end)
     else
       nil -> {:error, :role_not_found}
@@ -53,16 +64,25 @@ defmodule Proplex.Authorization do
   def assign_role(user, role_name, opts \\ []) do
     property_id = Keyword.get(opts, :property_id)
 
-    with %Role{} = role <- get_role_by_name(role_name) do
-      %UserRole{}
-      |> UserRole.changeset(%{
+    with %Role{} = role <- get_role_by_name(role_name),
+         {:ok, user_role} <-
+           UserRole.changeset(%UserRole{}, %{
+             user_id: user.id,
+             role_id: role.id,
+             property_id: property_id
+           })
+           |> Repo.insert() do
+      Logger.info("Role assigned",
+        event: "role_assigned",
         user_id: user.id,
-        role_id: role.id,
+        role: to_string(role_name),
         property_id: property_id
-      })
-      |> Repo.insert()
+      )
+
+      {:ok, user_role}
     else
       nil -> {:error, :role_not_found}
+      {:error, _changeset} = error -> error
     end
   end
 

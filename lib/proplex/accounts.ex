@@ -132,9 +132,26 @@ defmodule Proplex.Accounts do
     end)
     |> Repo.transact()
     |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _changes} -> {:error, changeset}
-      {:error, _step, _failed, _changes} -> {:error, :registration_failed}
+      {:ok, %{user: user}} ->
+        Logger.info("User registered successfully",
+          event: :user_registered,
+          user_id: user.id,
+          email: user.email
+        )
+
+        {:ok, user}
+
+      {:error, :user, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, step, failed, _changes} ->
+        Logger.warning("Registration transaction failed at unexpected step.",
+          event: :registration_failed,
+          failed_step: step,
+          failed_value: inspect(failed)
+        )
+
+        {:error, :registration_failed}
     end
   end
 
