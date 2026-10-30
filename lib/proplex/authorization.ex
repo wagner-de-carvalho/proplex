@@ -94,7 +94,7 @@ defmodule Proplex.Authorization do
     |> Repo.exists?()
   end
 
-  defp get_role_by_name(role_name) do
+  def get_role_by_name(role_name) do
     Repo.get_by(Role, name: to_string(role_name))
   end
 

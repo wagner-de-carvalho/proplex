@@ -86,6 +86,13 @@ config :logger, :default_formatter,
     :flow,
     :role,
     :property_id,
+    :tenancy_id,
+    :apartment_id,
+    :start_date,
+    :end_date,
+    :building_name,
+    :unit_number,
+    :floor,
     :failed_step,
     :failed_value
   ]
