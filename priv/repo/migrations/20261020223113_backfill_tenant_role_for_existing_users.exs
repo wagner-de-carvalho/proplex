@@ -1,6 +1,5 @@
 defmodule Proplex.Repo.Migrations.BackfillTenantRoleForExistingUsers do
   use Ecto.Migration
-  import Ecto.Query
 
   def up do
     tenant_role_id =
