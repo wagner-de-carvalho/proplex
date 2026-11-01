@@ -2,6 +2,7 @@ defmodule Proplex.Apartments.Apartment do
   use Ecto.Schema
   import Ecto.Changeset
   alias Proplex.Apartments.Tenancy
+  alias Proplex.Issues.Issue
 
   @fields [:building_name, :unit_number, :floor]
 
@@ -16,6 +17,7 @@ defmodule Proplex.Apartments.Apartment do
     field :archived_at, :utc_datetime
 
     has_many :tenancies, Tenancy
+    has_many :issues, Issue
 
     timestamps(type: :utc_datetime)
   end

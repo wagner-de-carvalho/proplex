@@ -4,6 +4,7 @@ defmodule Proplex.Accounts.User do
   alias Proplex.Accounts.Profile
   alias Proplex.Apartments.Tenancy
   alias Proplex.Authorization.UserRole
+  alias Proplex.Issues.Issue
   alias Proplex.Repo
 
   schema "users" do
@@ -18,6 +19,8 @@ defmodule Proplex.Accounts.User do
 
     has_many :roles, through: [:user_roles, :role]
     has_many :tenancies, Tenancy
+    has_many :reported_issues, Issue, foreign_key: :reporter_id
+    has_many :assigned_issues, Issue, foreign_key: :assigned_technician_id
 
     has_one :profile, Profile
 
