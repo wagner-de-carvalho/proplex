@@ -176,6 +176,14 @@ defmodule Proplex.Apartments do
     end)
   end
 
+  def get_current_apartment_for_user(%{id: user_id}) do
+    Tenancy
+    |> join(:inner, [t], a in assoc(t, :apartment))
+    |> where([t], t.user_id == ^user_id and is_nil(t.end_date))
+    |> select([_t, a], a)
+    |> Repo.one()
+  end
+
   def get_current_tenancy_for_apartment(%{id: user_id}) do
     Tenancy
     |> join(:inner, [t], a in assoc(t, :apartment))

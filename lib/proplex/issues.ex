@@ -57,10 +57,6 @@ defmodule Proplex.Issues do
     end)
   end
 
-  defp normalize_attrs(value) do
-    %{}
-  end
-
   def start_progress(%Issue{status: :reported} = issue) do
     issue
     |> Issue.start_progress_changeset()
@@ -185,11 +181,11 @@ defmodule Proplex.Issues do
     |> Repo.all()
   end
 
-  def change_issue_report(%Issue{} = issue \\ %Issue{}, attrs \\ []) do
+  def change_issue_report(%Issue{} = issue \\ %Issue{}, attrs \\ %{}) do
     Issue.report_changeset(issue, attrs)
   end
 
-  def change_issue_assign(%Issue{} = issue \\ %Issue{}, attrs \\ []) do
+  def change_issue_assign(%Issue{} = issue \\ %Issue{}, attrs \\ %{}) do
     Issue.assign_changeset(issue, attrs)
   end
 

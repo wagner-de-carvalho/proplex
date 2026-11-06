@@ -2,6 +2,7 @@ defmodule Proplex.Issues.Issue do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Phoenix.Naming
   alias Proplex.Accounts.User
   alias Proplex.Apartments.Apartment
 
@@ -57,6 +58,18 @@ defmodule Proplex.Issues.Issue do
 
   def assigned?(%__MODULE__{assigned_technician_id: nil}), do: false
   def assigned?(%__MODULE__{assigned_technician_id: _}), do: true
+
+  def priorities do
+    __MODULE__
+    |> Ecto.Enum.values(:priority)
+    |> Enum.map(&{Naming.humanize(Atom.to_string(&1)), &1})
+  end
+
+  def statuses do
+    __MODULE__
+    |> Ecto.Enum.values(:status)
+    |> Enum.map(&{Naming.humanize(Atom.to_string(&1)), &1})
+  end
 
   defp trim_text_fields(changeset, fields) do
     Enum.reduce(fields, changeset, fn field, acc ->
