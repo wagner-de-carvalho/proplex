@@ -40,7 +40,7 @@ defmodule Proplex.Issues do
 
   def assign_technician(%Issue{} = issue, technician_id) do
     issue
-    |> Issue.changeset(%{technician_id: technician_id})
+    |> Issue.changeset(%{assigned_technician_id: technician_id})
     |> Repo.update()
     |> then(fn
       {:ok, issue} ->
