@@ -1,6 +1,7 @@
 defmodule Proplex.Authorization do
   import Ecto.Query, warn: false
   require Logger
+  alias Proplex.Accounts.User
   alias Proplex.Authorization.Permission
   alias Proplex.Authorization.Role
   alias Proplex.Authorization.UserRole
@@ -92,6 +93,19 @@ defmodule Proplex.Authorization do
     |> where([ur, r], ur.user_id == ^user.id)
     |> where([ur, r], r.name == ^to_string(role_name))
     |> Repo.exists?()
+  end
+
+  def list_users_with_role(role_name) do
+    technician_ids =
+      UserRole
+      |> join(:inner, [ur], r in assoc(ur, :role))
+      |> where([_ur, r], r.name == ^to_string(role_name))
+      |> select([ur, _r], ur.user_id)
+
+    User
+    |> where([u], u.id in subquery(technician_ids))
+    |> order_by([u], u.username)
+    |> Repo.all()
   end
 
   def get_role_by_name(role_name) do

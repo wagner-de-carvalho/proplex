@@ -70,6 +70,41 @@ defmodule ProplexWeb.IssueLive.Show do
               <dd class="font-medium">{Calendar.strftime(@issue.resolved_on, "%B %-d, %Y")}</dd>
             </div>
           </dl>
+
+          <div
+            :if={@can_assign?}
+            class="mt-6 border-t border-base-300 pt-4"
+          >
+            <h2 class="mb-3 text-xs font-semibold uppercase tracking-wide text-base-content/60">
+              {if @issue.assigned_technician, do: "Reassign technician", else: "Assign a technician"}
+            </h2>
+
+            <.form
+              for={@assign_form}
+              id="assign-technician"
+              phx-submit="assign"
+              class="flex flex-col gap-3 sm:flex-row sm:items-end"
+            >
+              <div class="flex-1">
+                <.input
+                  field={@assign_form[:assigned_technician_id]}
+                  type="select"
+                  label="Technician"
+                  options={@technician_options}
+                  prompt="- Select a technician -"
+                />
+
+                <.button
+                  phx-disable-with="Saving ..."
+                  class="btn btn-primary mb-2"
+                >
+                  <.icon name="hero-plus" class="size-4" />
+                  {if @issue.assigned_technician, do: "Reassign", else: "Assign"}
+                </.button>
+              </div>
+            </.form>
+          </div>
+
           <!-- -->
           <div
             :if={@can_update_status? and @issue.status in [:reported, :in_progress]}
@@ -129,6 +164,7 @@ defmodule ProplexWeb.IssueLive.Show do
              |> assign(:issue, issue)
              |> assign(:can_delete?, true)
              |> assign(:can_update_status?, false)
+             |> assign_admin_defaults()
              |> assign(:back_path, ~p"/issues")
              |> assign(:back_label, "Back to My Issues")}
 
@@ -138,6 +174,7 @@ defmodule ProplexWeb.IssueLive.Show do
              |> assign(:issue, issue)
              |> assign(:can_delete?, false)
              |> assign(:can_update_status?, true)
+             |> assign_admin_extras(issue)
              |> assign(:back_path, ~p"/")
              |> assign(:back_label, "Back")}
 
@@ -147,6 +184,7 @@ defmodule ProplexWeb.IssueLive.Show do
              |> assign(:issue, issue)
              |> assign(:can_delete?, false)
              |> assign(:can_update_status?, true)
+             |> assign_admin_defaults()
              |> assign(:back_path, ~p"/issues/assigned")
              |> assign(:back_label, "Back to My Assignments")}
 
@@ -157,6 +195,29 @@ defmodule ProplexWeb.IssueLive.Show do
              |> push_navigate(~p"/")}
         end
     end
+  end
+
+  defp assign_admin_defaults(socket) do
+    socket
+    |> assign(:can_assign?, false)
+    |> assign(:technician_options, [])
+    |> assign(:assign_form, nil)
+  end
+
+  defp assign_admin_extras(socket, issue) do
+    technicians = Authorization.list_users_with_role("technician")
+    options = Enum.map(technicians, &{"@#{&1.username} - #{&1.email}", &1.id})
+
+    socket
+    |> assign(:can_assign?, true)
+    |> assign(:technician_options, options)
+    |> assign(:assign_form, build_assign_form(issue))
+  end
+
+  defp build_assign_form(issue) do
+    issue
+    |> Issues.change_issue_assign(%{})
+    |> to_form(as: "issue")
   end
 
   @impl true
@@ -208,6 +269,33 @@ defmodule ProplexWeb.IssueLive.Show do
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Couldn't update the issue. Please try again")}
+    end
+  end
+
+  @impl true
+  def handle_event("assign", %{"issue" => attrs}, socket) do
+    user = socket.assigns.current_scope.user
+    issue = socket.assigns.issue
+
+    if socket.assigns.can_assign? and Authorization.has_role?(user, "admin") do
+      case Issues.assign_technician(issue, attrs["assigned_technician_id"]) do
+        {:ok, _} ->
+          updated = Issues.get_issue(issue.id)
+
+          {:noreply,
+           socket
+           |> assign(:issue, updated)
+           |> assign(:assign_form, build_assign_form(updated))
+           |> put_flash(:info, "Technician assigned.")}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply,
+           socket
+           |> assign(:assign_form, to_form(changeset, as: "issue"))
+           |> put_flash(:error, "Couldn't assign technician. Please try again.")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "You can't assign technicians.")}
     end
   end
 
