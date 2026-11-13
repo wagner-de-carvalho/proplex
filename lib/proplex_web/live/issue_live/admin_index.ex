@@ -12,7 +12,7 @@ defmodule ProplexWeb.IssueLive.AdminIndex do
         <div class="mb-6">
           <h1 class="text-2xl font-semibold tracking-tight">All Issues</h1>
           <p class="mt-2 text-sm text-base-content/70">
-            Every reported issue accross every aprtment, newest first.
+            Every reported issue accross every apartment, newest first.
           </p>
         </div>
         <%= case @issues do %>
