@@ -112,6 +112,14 @@ defmodule ProplexWeb.Router do
       live "/admin/issues", IssueLive.AdminIndex, :index
     end
 
+    live_session :require_apartments_manage,
+      on_mount: [
+        {ProplexWeb.UserAuth, :require_authenticated},
+        {ProplexWeb.UserAuthorization, {:require_permission, :apartments, :manage}}
+      ] do
+      live "/admin/apartments", ApartmentLive.AdminIndex, :index
+    end
+
     live_session :require_profiles_view,
       on_mount: [
         {ProplexWeb.UserAuth, :require_authenticated},

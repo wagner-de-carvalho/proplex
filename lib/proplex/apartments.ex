@@ -220,4 +220,50 @@ defmodule Proplex.Apartments do
     |> preload(:user)
     |> Repo.all()
   end
+
+  def list_apartments_with_current_tenant(opts \\ []) do
+    Apartment
+    |> join(:left, [a], t in assoc(a, :tenancies),
+      on: t.apartment_id == a.id and is_nil(t.end_date)
+    )
+    |> join(:left, [_a, t], u in assoc(t, :user))
+    |> order_by([a, _t, _u], asc: a.building_name, asc: a.unit_number)
+    |> select([a, _t, u], %{apartment: a, current_tenant: u})
+    |> maybe_filter_archived(Keyword.get(opts, :include_archived, true))
+    |> maybe_filter_building(Keyword.get(opts, :building_name))
+    |> maybe_filter_occupancy(Keyword.get(opts, :occupancy, :all))
+    |> Repo.all()
+  end
+
+  defp maybe_filter_archived(query, true), do: query
+
+  defp maybe_filter_archived(query, false) do
+    where(query, [a, _t, _u], is_nil(a.archived_at))
+  end
+
+  defp maybe_filter_building(query, nil), do: query
+
+  defp maybe_filter_building(query, name) when is_binary(name) and name != "" do
+    where(query, [a, _t, _u], a.building_name == ^name)
+  end
+
+  defp maybe_filter_building(query, _), do: query
+
+  defp maybe_filter_occupancy(query, :all), do: query
+
+  defp maybe_filter_occupancy(query, :vacant) do
+    where(query, [_a, t, _u], is_nil(t.id))
+  end
+
+  defp maybe_filter_occupancy(query, :occupied) do
+    where(query, [_a, t, _u], not is_nil(t.id))
+  end
+
+  def list_building_names do
+    Apartment
+    |> distinct(true)
+    |> select([a], a.building_name)
+    |> order_by([a], a.building_name)
+    |> Repo.all()
+  end
 end
