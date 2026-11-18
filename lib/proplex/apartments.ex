@@ -1,6 +1,8 @@
 defmodule Proplex.Apartments do
   import Ecto.Query, warn: false
   require Logger
+  alias Proplex.Accounts.User
+  alias Proplex.Authorization.UserRole
   alias Proplex.Apartments.Apartment
   alias Proplex.Apartments.Tenancy
   alias Proplex.Repo
@@ -135,7 +137,7 @@ defmodule Proplex.Apartments do
 
   defp insert_tenancy(attrs) do
     %Tenancy{}
-    |> Tenancy.changeset(attrs)
+    |> Tenancy.create_changeset(attrs)
     |> Repo.insert()
     |> then(fn
       {:ok, tenancy} ->
@@ -156,7 +158,7 @@ defmodule Proplex.Apartments do
 
   def end_tenancy(%Tenancy{} = tenancy, %Date{} = end_date) do
     tenancy
-    |> Tenancy.changeset(%{end_date: end_date})
+    |> Tenancy.end_changeset(%{end_date: end_date})
     |> Repo.update()
     |> then(fn
       {:ok, tenancy} ->
@@ -257,6 +259,22 @@ defmodule Proplex.Apartments do
 
   defp maybe_filter_occupancy(query, :occupied) do
     where(query, [_a, t, _u], not is_nil(t.id))
+  end
+
+  def list_eligible_tenants do
+    active_tenant_ids_query =
+      Tenancy
+      |> where([t], is_nil(t.end_date))
+      |> select([t], t.user_id)
+
+    User
+    |> join(:inner, [u], ur in UserRole, on: ur.user_id == u.id)
+    |> join(:inner, [_u, ur], r in assoc(ur, :role))
+    |> where([_u, _ur, r], r.name == "tenant")
+    |> where([u, _ur, r], u.id not in subquery(active_tenant_ids_query))
+    |> order_by([u, _ur, _r], u.username)
+    |> distinct(true)
+    |> Repo.all()
   end
 
   def list_building_names do

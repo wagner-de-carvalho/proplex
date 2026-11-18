@@ -17,20 +17,19 @@ defmodule Proplex.Apartments.Tenancy do
     timestamps(type: :utc_datetime)
   end
 
-  @doc false
-  def changeset(tenancy, attrs) do
+  def create_changeset(tenancy, attrs) do
     tenancy
     |> cast(attrs, @fields)
     |> validate_required(@required)
-    |> assoc_constraint(:apartment)
     |> assoc_constraint(:user)
+    |> assoc_constraint(:apartment)
     |> unique_constraint(:apartment_id,
       name: :tenancies_active_apartment_index,
-      message: "This apartment already has an active tenant"
+      message: "this apartment already has an active tenant"
     )
     |> unique_constraint(:user_id,
       name: :tenancies_active_user_index,
-      message: "This user already has an active tenancy"
+      message: "this user already has an active tenancy"
     )
   end
 
