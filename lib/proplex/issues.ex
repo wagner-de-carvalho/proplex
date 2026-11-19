@@ -4,6 +4,9 @@ defmodule Proplex.Issues do
   alias Proplex.Apartments
   alias Proplex.Issues.Issue
   alias Proplex.Repo
+  alias Proplex.Workers.IssueAssignedEmail
+  alias Proplex.Workers.IssueReportedEmail
+  alias Proplex.Workers.IssueResolvedEmail
 
   def report_issue(%{id: reporter_id} = reporter, attrs) do
     case Apartments.get_current_tenancy_for_apartment(reporter) do
@@ -30,6 +33,10 @@ defmodule Proplex.Issues do
               priority: issue.priority
             )
 
+            %{issue_id: issue.id}
+            |> IssueReportedEmail.new()
+            |> Oban.insert()
+
             {:ok, issue}
 
           other ->
@@ -49,6 +56,10 @@ defmodule Proplex.Issues do
           issue_id: issue.id,
           assigned_technician_id: technician_id
         )
+
+        %{issue_id: issue.id}
+        |> IssueAssignedEmail.new()
+        |> Oban.insert()
 
         {:ok, issue}
 
@@ -88,6 +99,10 @@ defmodule Proplex.Issues do
           assigned_technician_id: issue.assigned_technician_id,
           resolved_on: Date.to_iso8601(issue.resolved_on)
         )
+
+        %{issue_id: issue.id}
+        |> IssueResolvedEmail.new()
+        |> Oban.insert()
 
         {:ok, issue}
 
