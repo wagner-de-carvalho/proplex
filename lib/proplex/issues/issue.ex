@@ -6,6 +6,8 @@ defmodule Proplex.Issues.Issue do
   alias Proplex.Accounts.User
   alias Proplex.Apartments.Apartment
 
+  @type t :: %__MODULE__{}
+
   @fields [
     :title,
     :description,

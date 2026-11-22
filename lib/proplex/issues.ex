@@ -2,6 +2,7 @@ defmodule Proplex.Issues do
   import Ecto.Query, warn: false
   require Logger
   alias Proplex.Apartments
+  alias Proplex.Issues.Broadcast
   alias Proplex.Issues.Issue
   alias Proplex.Repo
   alias Proplex.Workers.IssueAssignedEmail
@@ -37,6 +38,8 @@ defmodule Proplex.Issues do
             |> IssueReportedEmail.new()
             |> Oban.insert()
 
+            Broadcast.issue_event(issue, :reported)
+
             {:ok, issue}
 
           other ->
@@ -46,6 +49,8 @@ defmodule Proplex.Issues do
   end
 
   def assign_technician(%Issue{} = issue, technician_id) do
+    previous_tech_id = issue.assigned_technician_id
+
     issue
     |> Issue.changeset(%{assigned_technician_id: technician_id})
     |> Repo.update()
@@ -60,6 +65,12 @@ defmodule Proplex.Issues do
         %{issue_id: issue.id}
         |> IssueAssignedEmail.new()
         |> Oban.insert()
+
+        Broadcast.issue_event(issue, :assigned)
+
+        if previous_tech_id && previous_tech_id != issue.assigned_technician_id do
+          Broadcast.notify_previous_technician(previous_tech_id, issue.id)
+        end
 
         {:ok, issue}
 
@@ -79,6 +90,8 @@ defmodule Proplex.Issues do
           issue_id: issue.id,
           assigned_technician_id: issue.assigned_technician_id
         )
+
+        Broadcast.issue_event(issue, :status_change)
 
         {:ok, issue}
 
@@ -104,6 +117,8 @@ defmodule Proplex.Issues do
         |> IssueResolvedEmail.new()
         |> Oban.insert()
 
+        Broadcast.issue_event(issue, :status_change)
+
         {:ok, issue}
 
       other ->
@@ -123,6 +138,8 @@ defmodule Proplex.Issues do
           reporter_id: issue.reporter_id,
           resolved_on: Date.to_iso8601(issue.resolved_on)
         )
+
+        Broadcast.issue_event(issue, :deleted)
 
         {:ok, issue}
 
