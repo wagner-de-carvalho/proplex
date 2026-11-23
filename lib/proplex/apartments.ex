@@ -1,12 +1,14 @@
 defmodule Proplex.Apartments do
   import Ecto.Query, warn: false
   require Logger
+  alias Ecto.Changeset
+  alias Ecto.Multi
   alias Proplex.Accounts.User
   alias Proplex.Authorization.UserRole
   alias Proplex.Apartments.Apartment
+  alias Proplex.Apartments.PendingTenancy
   alias Proplex.Apartments.Tenancy
   alias Proplex.Repo
-  alias Ecto.Changeset
 
   def list_apartments(opts \\ []) do
     include_archived? = Keyword.get(opts, :include_archived, false)
@@ -65,35 +67,27 @@ defmodule Proplex.Apartments do
     end)
   end
 
-  def archive_apartment(%Apartment{} = apartment) do
-    apartment
-    |> get_active_tenancy_for_apartment()
-    |> then(fn
-      nil -> update_apartment_archived_at(apartment)
-      _tenancy -> {:error, :active_tenancy_exists}
-    end)
-  end
+  # TODO: still unused
+  # defp update_apartment_archived_at(%Apartment{} = apartment) do
+  #   apartment
+  #   |> Changeset.change(archived_at: DateTime.utc_now() |> DateTime.truncate(:second))
+  #   |> Repo.update()
+  #   |> then(fn
+  #     {:ok, apartment} ->
+  #       Logger.info("Apartment archived",
+  #         event: :apartment_archived,
+  #         apartment_id: apartment.id,
+  #         building_name: apartment.building_name,
+  #         unit_number: apartment.unit_number,
+  #         floor: apartment.floor
+  #       )
 
-  defp update_apartment_archived_at(%Apartment{} = apartment) do
-    apartment
-    |> Changeset.change(archived_at: DateTime.utc_now() |> DateTime.truncate(:second))
-    |> Repo.update()
-    |> then(fn
-      {:ok, apartment} ->
-        Logger.info("Apartment archived",
-          event: :apartment_archived,
-          apartment_id: apartment.id,
-          building_name: apartment.building_name,
-          unit_number: apartment.unit_number,
-          floor: apartment.floor
-        )
+  #       {:ok, apartment}
 
-        {:ok, apartment}
-
-      other ->
-        other
-    end)
-  end
+  #     other ->
+  #       other
+  #   end)
+  # end
 
   def unarchive_apartment(%Apartment{archived_at: nil} = apartment) do
     {:ok, apartment}
@@ -283,5 +277,197 @@ defmodule Proplex.Apartments do
     |> select([a], a.building_name)
     |> order_by([a], a.building_name)
     |> Repo.all()
+  end
+
+  @pending_tenancy_token_validity_days 7
+
+  def create_pending_tenancy(attrs) do
+    {raw_token, token_hash, expires_at} = generate_invite_credentials()
+
+    attrs =
+      attrs
+      |> normalize_attrs()
+      |> Map.put("token_hash", token_hash)
+      |> Map.put("expires_at", expires_at)
+
+    result =
+      %PendingTenancy{}
+      |> PendingTenancy.changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, pending} ->
+        Logger.info("Pending tenancy created",
+          event: :pending_tenancy_created,
+          pending_tenancy_id: pending.id,
+          apartment_id: pending.apartment_id,
+          invite_email: pending.invite_email,
+          start_date: Date.to_iso8601(pending.start_date)
+        )
+
+        {:ok, pending, raw_token}
+
+      other ->
+        other
+    end
+  end
+
+  def get_pending_tenancy_by_token(raw_token) when is_binary(raw_token) do
+    token_hash = :crypto.hash(:sha256, raw_token)
+    now = DateTime.utc_now(:second)
+
+    PendingTenancy
+    |> where([p], p.token_hash == ^token_hash and p.expires_at > ^now)
+    |> preload(:apartment)
+    |> Repo.one()
+  end
+
+  def get_pending_tenancy_by_token(_), do: nil
+
+  def get_pending_tenancy!(id), do: Repo.get!(PendingTenancy, id)
+
+  def list_pending_tenancies_for_apartment(%Apartment{id: apartment_id}) do
+    PendingTenancy
+    |> where([p], p.apartment_id == ^apartment_id)
+    |> order_by([p], desc: p.insertd_at)
+    |> Repo.all()
+  end
+
+  def cancel_pending_tenancy(%PendingTenancy{} = pending) do
+    case Repo.delete(pending) do
+      {:ok, deleted} ->
+        Logger.warning("Pending tenancy canceled",
+          event: :pending_tenancy_canceled,
+          pending_tenancy_id: deleted.id,
+          apartment_id: deleted.apartment_id,
+          invite_email: deleted.invite_email
+        )
+
+        {:ok, deleted}
+
+      other ->
+        other
+    end
+  end
+
+  def regenerate_pending_tenancy_token(%PendingTenancy{} = pending) do
+    {raw_token, token_hash, expires_at} = generate_invite_credentials()
+
+    result =
+      pending
+      |> PendingTenancy.regenerate_token_changeset(%{
+        token_hash: token_hash,
+        expires_at: expires_at
+      })
+      |> Repo.update()
+
+    case result do
+      {:ok, updated} ->
+        Logger.info("Pending tenancy token regenerated",
+          event: :pending_tenancy_resent,
+          pending_tenancy_id: updated.id,
+          apartment_id: updated.apartment_id,
+          invite_email: updated.invite_email
+        )
+
+        {:ok, updated, raw_token}
+
+      other ->
+        other
+    end
+  end
+
+  def consume_pending_tenancy(%PendingTenancy{} = pending, user) do
+    tenancy_changeset =
+      Tenancy.create_changeset(%Tenancy{}, %{
+        user_id: user.id,
+        apartmnt_id: pending.apartment_id,
+        start_date: pending.start_date
+      })
+
+    result =
+      Multi.new()
+      |> Multi.insert(:tenancy, tenancy_changeset)
+      |> Multi.delete(:pending_tenancy, pending)
+      |> Repo.transact()
+
+    case result do
+      {:ok, %{tenancy: tenancy}} ->
+        Logger.info("Pending tenancy consumed",
+          event: :pending_tenancy_consumed,
+          pending_tenancy_id: pending.id,
+          tenancy_id: tenancy.id,
+          user_id: user.id,
+          apartmnt_id: tenancy.apartmnt_id,
+          start_date: Date.to_iso8601(tenancy.start_date)
+        )
+
+        {:ok, tenancy}
+
+      {:error, :tenancy, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, step, value, _changes} ->
+        Logger.warning("Pending tenancy consume failed",
+          event: :pending_tenancy_consume_failed,
+          pending_tenancy_id: pending.id,
+          failed_step: step,
+          failed_value: inspect(value)
+        )
+
+        {:error, {step, value}}
+    end
+  end
+
+  defp generate_invite_credentials do
+    raw_token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+    token_hash = :crypto.hash(:sha256, raw_token)
+
+    expires_at =
+      DateTime.utc_now(:second)
+      |> DateTime.add(@pending_tenancy_token_validity_days, :day)
+
+    {raw_token, token_hash, expires_at}
+  end
+
+  defp normalize_attrs(attrs) when is_map(attrs) do
+    Map.new(attrs, fn
+      {key, value} when is_atom(key) -> {Atom.to_string(key), value}
+      {key, value} -> {key, value}
+    end)
+  end
+
+  def archive_apartment(%Apartment{} = apartment) do
+    cond do
+      get_active_tenancy_for_apartment(apartment) != nil ->
+        {:error, :active_tenancy_exists}
+
+      list_pending_tenancies_for_apartment(apartment) != [] ->
+        {:error, :active_tenancy_exists}
+
+      true ->
+        result =
+          Changeset.change(apartment,
+            archived_at:
+              DateTime.utc_now()
+              |> DateTime.truncate(:second)
+          )
+          |> Repo.update()
+
+        case result do
+          {:ok, archived} ->
+            Logger.warning("Apartment archived",
+              event: :apartment_archived,
+              apartment_id: archived.id,
+              building_name: archived.building_name,
+              unit_number: archived.unit_number
+            )
+
+            {:ok, archived}
+
+          other ->
+            other
+        end
+    end
   end
 end
