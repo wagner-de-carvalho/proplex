@@ -3,6 +3,7 @@ defmodule ProplexWeb.IssueLive.Assigned do
   import ProplexWeb.IssueLive.Badges
 
   alias Proplex.Issues
+  alias Proplex.Issues.Broadcast
 
   @impl true
   def render(assigns) do
@@ -65,8 +66,15 @@ defmodule ProplexWeb.IssueLive.Assigned do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
+    if connected?(socket), do: Broadcast.subscribe_to_technician(user.id)
     issues = Issues.list_issues_for_technician(user)
 
     {:ok, assign(socket, :issues, issues)}
+  end
+
+  @impl true
+  def handle_info({:issue_event, _event, _issue_id}, socket) do
+    user = socket.assigns.current_scope.user
+    {:noreply, assign(socket, :issues, Issues.list_issues_for_technician(user))}
   end
 end
