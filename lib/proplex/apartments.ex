@@ -9,6 +9,9 @@ defmodule Proplex.Apartments do
   alias Proplex.Apartments.PendingTenancy
   alias Proplex.Apartments.Tenancy
   alias Proplex.Repo
+  alias Proplex.Workers.PendingTenancyInviteEmail
+
+  @pending_tenancy_token_validity_days 7
 
   def list_apartments(opts \\ []) do
     include_archived? = Keyword.get(opts, :include_archived, false)
@@ -279,8 +282,6 @@ defmodule Proplex.Apartments do
     |> Repo.all()
   end
 
-  @pending_tenancy_token_validity_days 7
-
   def create_pending_tenancy(attrs) do
     {raw_token, token_hash, expires_at} = generate_invite_credentials()
 
@@ -304,6 +305,8 @@ defmodule Proplex.Apartments do
           invite_email: pending.invite_email,
           start_date: Date.to_iso8601(pending.start_date)
         )
+
+        enqueue_invite_email(pending.id, raw_token)
 
         {:ok, pending, raw_token}
 
@@ -369,6 +372,8 @@ defmodule Proplex.Apartments do
           apartment_id: updated.apartment_id,
           invite_email: updated.invite_email
         )
+
+        enqueue_invite_email(updated.id, raw_token)
 
         {:ok, updated, raw_token}
 
@@ -443,7 +448,7 @@ defmodule Proplex.Apartments do
         {:error, :active_tenancy_exists}
 
       list_pending_tenancies_for_apartment(apartment) != [] ->
-        {:error, :active_tenancy_exists}
+        {:error, :pending_tenancy_exists}
 
       true ->
         result =
@@ -469,5 +474,11 @@ defmodule Proplex.Apartments do
             other
         end
     end
+  end
+
+  defp enqueue_invite_email(pending_tenancy_id, raw_token) do
+    %{pending_tenancy_id: pending_tenancy_id, raw_token: raw_token}
+    |> PendingTenancyInviteEmail.new()
+    |> Oban.insert()
   end
 end
